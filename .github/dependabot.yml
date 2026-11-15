@@ -1,0 +1,17 @@
+version: 2
+
+updates:
+  - package-ecosystem: "pip"
+    directory: "/midterm"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/midterm/section6"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/midterm/.github/workflows"
+    schedule:
+      interval: "weekly"
