@@ -1,0 +1,24 @@
+EventID: 4688
+
+    NewProcessName|endswith:
+      '\powershell.exe'
+
+    CommandLine|contains:
+      - '-EncodedCommand'
+      - '-enc '
+      - '-e '
+
+  condition: selection
+
+falsepositives:
+
+  - Administrative automation scripts
+  - Internal IT management activity
+
+level: high
+
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+  - attack.t1027

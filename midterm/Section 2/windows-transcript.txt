@@ -1,0 +1,340 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261115152326
+Username: EASTERNU\mattl
+RunAs User: EASTERNU\mattl
+Configuration Name: 
+Machine: EASTERNU (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 2180
+PSVersion: 5.1.26100.9818
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9818
+BuildVersion: 10.0.26100.9818
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\Users\mattl\OneDrive\Desktop\IA 462\midterm\Section 2\windows-transcript.txt
+PS C:\WINDOWS\system32> Get-MpComputerStatus |
+Select-Object `
+AMServiceEnabled,
+AntivirusEnabled,
+RealTimeProtectionEnabled,
+IsTamperProtected,
+AMEngineVersion,
+AntivirusSignatureLastUpdated
+
+
+AMServiceEnabled              : True
+AntivirusEnabled              : True
+RealTimeProtectionEnabled     : True
+IsTamperProtected             : True
+AMEngineVersion               : 1.1.26100.4
+AntivirusSignatureLastUpdated : 11/15/2026 5:40:55 AM
+
+
+
+PS C:\WINDOWS\system32> Get-NetFirewallProfile |
+Select-Object `
+Name,
+Enabled,
+DefaultInboundAction,
+DefaultOutboundAction
+
+Name    Enabled DefaultInboundAction DefaultOutboundAction
+----    ------- -------------------- ---------------------
+Domain     True                Block                 Allow
+Private    True                Block                 Allow
+Public     True                Block                 Allow
+
+
+PS C:\WINDOWS\system32> Get-SmbServerConfiguration |
+Select-Object EnableSMB1Protocol
+
+EnableSMB1Protocol
+------------------
+             False
+
+
+PS C:\WINDOWS\system32> auditpol `
+/set `
+/subcategory:"Process Creation" `
+/success:enable `
+/failure:enable
+The command was successfully executed.
+PS C:\WINDOWS\system32> reg add `
+"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit" `
+/v ProcessCreationIncludeCmdLine_Enabled `
+/t REG_DWORD `
+/d 1 `
+/f
+The operation completed successfully.
+PS C:\WINDOWS\system32> auditpol /get /subcategory:"Process Creation"
+System audit policy
+Category/Subcategory                      Setting
+Detailed Tracking
+  Process Creation                        Success and Failure
+PS C:\WINDOWS\system32> $sbl =
+"HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
+PS C:\WINDOWS\system32> Set-ItemProperty `
+-Path $sbl `
+-Name EnableScriptBlockLogging `
+-Value 1
+PS C:\WINDOWS\system32> Get-ItemProperty $sbl
+
+
+EnableScriptBlockLogging : 1
+PSPath                   : Microsoft.PowerShell.Core\Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windo
+                           ws\PowerShell\ScriptBlockLogging
+PSParentPath             : Microsoft.PowerShell.Core\Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windo
+                           ws\PowerShell
+PSChildName              : ScriptBlockLogging
+PSDrive                  : HKLM
+PSProvider               : Microsoft.PowerShell.Core\Registry
+
+
+
+PS C:\WINDOWS\system32> $dest =
+"$env:USERPROFILE\Downloads\lab5-sysmon"
+
+New-Item `
+-ItemType Directory `
+-Force `
+-Path $dest
+
+
+    Directory: C:\Users\mattl\Downloads
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        11/15/2026   3:32 PM                lab5-sysmon
+
+
+PS C:\WINDOWS\system32> Invoke-WebRequest `
+-Uri "https://download.sysinternals.com/files/Sysmon.zip" `
+-OutFile "$dest\Sysmon.zip"
+PS C:\WINDOWS\system32> Invoke-WebRequest `
+-Uri "https://raw.githubusercontent.com/SwiftOnSecurity/sysmon-config/master/sysmonconfig-export.xml" `
+-OutFile "$dest\sysmonconfig.xml"
+PS C:\WINDOWS\system32> Expand-Archive `
+"$dest\Sysmon.zip" `
+-DestinationPath $dest `
+-Force
+PS C:\WINDOWS\system32> cd $dest
+
+.\Sysmon64.exe `
+-accepteula `
+-i `
+sysmonconfig.xml
+
+
+System Monitor v15.22 - System activity monitor
+By Mark Russinovich and Thomas Garnier
+Copyright (C) 2014-2026 Microsoft Corporation
+Using libxml2. libxml2 is Copyright (C) 1998-2012 Daniel Veillard. All Rights Reserved.
+Sysinternals - www.sysinternals.com
+
+Loading configuration file with schema version 4.50
+Sysmon schema version: 4.91
+Configuration file validated.
+The service Sysmon64 is already registered. Uninstall Sysmon before reinstalling.
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-Service Sysmon64
+
+Status   Name               DisplayName
+------   ----               -----------
+Running  Sysmon64           Sysmon64
+
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Start-Process `
+-FilePath "powershell.exe" `
+-Verb runAs `
+-ArgumentList "-Command","runas /user:BadUser1 cmd"
+PS C:\Users\mattl\Downloads\lab5-sysmon> $cmd =
+'Write-Host "Lab5 Test Activity"'
+PS C:\Users\mattl\Downloads\lab5-sysmon> $b64 =
+[Convert]::ToBase64String(
+[System.Text.Encoding]::Unicode.GetBytes($cmd)
+)
+PS C:\Users\mattl\Downloads\lab5-sysmon> powershell.exe `
+-EncodedCommand `
+$b64
+Lab5 Test Activity
+PS C:\Users\mattl\Downloads\lab5-sysmon> net user `
+lab5suspect `
+P@ssw0rd! `
+/add
+The command completed successfully.
+PS C:\Users\mattl\Downloads\lab5-sysmon> net user `
+lab5suspect `
+/delete
+The command completed successfully.
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-WinEvent `
+-FilterHashtable @{
+LogName='Security';
+Id=4624,4625,4688,4720
+} `
+-MaxEvents 40 |
+Format-Table `
+TimeCreated,
+Id,
+ProviderName
+
+TimeCreated             Id ProviderName
+-----------             -- ------------
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+11/15/2026 3:35:57 PM 4688 Microsoft-Windows-Security-Auditing
+
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-WinEvent `
+-LogName `
+'Microsoft-Windows-PowerShell/Operational' `
+-MaxEvents 20 |
+Where-Object {$_.Id -eq 4104}
+
+
+   ProviderName: Microsoft-Windows-PowerShell
+
+TimeCreated                      Id LevelDisplayName Message
+-----------                      -- ---------------- -------
+11/15/2026 3:36:06 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:36:06 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:56 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:56 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:54 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:53 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:45 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:45 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:35 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:35 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:35 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:35 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+11/15/2026 3:35:26 PM          4104 Verbose          Creating Scriptblock text (1 of 1):...
+
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-WinEvent `
+-LogName Security `
+-MaxEvents 100 |
+ConvertTo-Json `
+-Depth 5 |
+Out-File `
+"C:\Users\<you>\Documents\ia462-lab5\midterm\section2\security-events.json"
+>> TerminatingError(Out-File): "Illegal characters in path."
+Out-File : Illegal characters in path.
+At line:6 char:1
++ Out-File `
++ ~~~~~~~~~~
+    + CategoryInfo          : OpenError: (:) [Out-File], ArgumentException
+    + FullyQualifiedErrorId : FileOpenFailure,Microsoft.PowerShell.Commands.OutFileCommand
+Out-File : Illegal characters in path.
+At line:6 char:1
++ Out-File `
++ ~~~~~~~~~~
+    + CategoryInfo          : OpenError: (:) [Out-File], ArgumentException
+    + FullyQualifiedErrorId : FileOpenFailure,Microsoft.PowerShell.Commands.OutFileCommand
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-WinEvent `
+-LogName Security `
+-MaxEvents 100 |
+ConvertTo-Json `
+-Depth 5 |
+Out-File `
+"C:\Users\<you>\Documents\ia462-lab5\midterm\section2\security-events.json"
+>> TerminatingError(Out-File): "Illegal characters in path."
+Out-File : Illegal characters in path.
+At line:6 char:1
++ Out-File `
++ ~~~~~~~~~~
+    + CategoryInfo          : OpenError: (:) [Out-File], ArgumentException
+    + FullyQualifiedErrorId : FileOpenFailure,Microsoft.PowerShell.Commands.OutFileCommand
+Out-File : Illegal characters in path.
+At line:6 char:1
++ Out-File `
++ ~~~~~~~~~~
+    + CategoryInfo          : OpenError: (:) [Out-File], ArgumentException
+    + FullyQualifiedErrorId : FileOpenFailure,Microsoft.PowerShell.Commands.OutFileCommand
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-WinEvent `
+-LogName Security `
+-MaxEvents 100 |
+ConvertTo-Json `
+-Depth 5 |
+Out-File `
+"C:\Users\mattl\OneDrive\Desktop\IA 462\Midterm\Section 2\security-events.json"
+PS C:\Users\mattl\Downloads\lab5-sysmon> Add-MpPreference `
+-ExclusionPath `
+"C:\Users\mattl\OneDrive\Desktop\IA 462\Midterm\app"
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-MpPreference |
+Select-Object ExclusionPath
+
+ExclusionPath
+-------------
+{C:\Users\mattl\OneDrive\Desktop\IA 462\Midterm\app}
+
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> Get-MpPreference |
+Out-File `
+"C:\Users\mattl\OneDrive\Desktop\IA 462\Midterm\Section 2\defender-exclusions.txt"
+PS C:\Users\mattl\Downloads\lab5-sysmon> Downloads\lab5-sysmon\sysmonconfig.xml
+Downloads\lab5-sysmon\sysmonconfig.xml : The module 'Downloads' could not be loaded. For more information, run 
+'Import-Module Downloads'.
+At line:1 char:1
++ Downloads\lab5-sysmon\sysmonconfig.xml
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (Downloads\lab5-sysmon\sysmonconfig.xml:String) [], 
+CommandNotFoundException
+    + FullyQualifiedErrorId : CouldNotAutoLoadModule
+Downloads\lab5-sysmon\sysmonconfig.xml : The module 'Downloads' could not be loaded. For more information, run
+'Import-Module Downloads'.
+At line:1 char:1
++ Downloads\lab5-sysmon\sysmonconfig.xml
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (Downloads\lab5-sysmon\sysmonconfig.xml:String) [], CommandNotFoundE
+   xception
+    + FullyQualifiedErrorId : CouldNotAutoLoadModule
+
+PS C:\Users\mattl\Downloads\lab5-sysmon> stop-Transcript
+**********************
+Windows PowerShell transcript end
+End time: 20261115154959
+**********************

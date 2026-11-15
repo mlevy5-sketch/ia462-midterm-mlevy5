@@ -1,0 +1,27 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": [
+    "SCMP_ARCH_X86_64"
+  ],
+  "syscalls": [
+    {
+      "names": [
+        "read",
+        "write",
+        "open",
+        "close",
+        "futex",
+        "epoll_wait",
+        "epoll_ctl",
+        "socket",
+        "bind",
+        "listen",
+        "accept4",
+        "recvfrom",
+        "sendto",
+        "clock_gettime"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    }
+  ]
+}
